@@ -1,0 +1,253 @@
+CKA Notes 
+
+kubectl edit rs <replica-set name>   (to modify parameters from command line)
+
+kubectl scale --replicas=3 rs/<replicaset name>  (scaling a rs)
+
+kubectl run --help
+
+kubectl run nginx --image=nginx
+kubectl get pods -o wide (easier to see nodes it’s on instead of using describe command)
+kubectl run redis --image=redis --dry-run=client -o yaml (creates yaml file manifest)
+
+kubectl create deployment <httpd-frontend> --replicas=3 --image=<httpd:2.4-alpine> --dry-run=client -o yaml > test2.yaml
+
+
+#script to test webapp response - curl-test.sh)
+for i in {1..35}; do
+   kubectl exec --namespace=kube-public curl -- sh -c 'test=`wget -qO- -T 2  http://webapp-service.default.svc.cluster.local:8080/info 2>&1` && echo "$test OK" || echo "Failed"';
+   echo ""
+done 
+
+
+
+alias k='kubectl'
+alias kdd='kubectl describe deployment'
+alias kp='kubectl describe pods'
+alias kaf='kubectl apply -f'
+
+
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+
+or 
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx2
+  labels: 
+    name: test
+spec:
+  containers:
+    - name: nginx2
+      image: nginx
+
+
+ 
+
+Create a new pod with the nginx image:
+
+kubectl run nginx --image=nginx --dry-run=client -o yaml
+
+Output:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+kubectl run nginx --image=nginx
+
+kubectl create -f replicaset-definition.yaml
+kubectl get rs
+kubectl delete rs <name>
+kubectl replace -f replicaset-definition.yaml
+kubectl scale –replicas=6 -f <name.yaml>
+kubectl scale replicaset <name> --replicas=2
+
+kubectl edit replicaset <name>
+
+kubectl explain replicaset
+
+kubectl create deployment <name>  --image=<image name> --replicas=3
+
+kubectl set image deployment.v1.apps/nginx-deployment nginx=nginx:1.16.1
+
+kubectl rollout status deployment/nginx-deployment
+
+kubectl rollout history deployment/nginx-deployment
+
+kubectl rollout undo deployment/nginx-deployment (rollback to previous version)
+
+kubectl create -f deployment <name> --record=true (records change cause)
+
+kubectl set image deployment.v1.apps/frontend simple-webapp=kodekloud/webapp-color:v2
+
+kubectl set image deployment.v1.apps/<deploy name> <container name>=<image name>
+
+Services:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-processing
+  labels:
+    app: myapp
+spec:
+  # type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    tier: backend
+      
+ 
+
+Create an NGINX Pod
+kubectl run nginx --image=nginx
+Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
+kubectl run nginx --image=nginx --dry-run=client -o yaml
+Create a deployment
+kubectl create deployment --image=nginx nginx
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run) with 4 Replicas (--replicas=4)
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > nginx-deployment.yaml
+Save it to a file, make necessary changes to the file (for example, adding more replicas) and then create the deployment.
+kubectl create -f nginx-deployment.yaml
+OR
+In k8s version 1.19+, we can specify the --replicas option to create a deployment with 4 replicas.
+kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml
+
+
+Namespaces:
+
+Kubectl get ns
+kubectl get pods -n <ns name> (get pods in a namespace) or
+kubectl get pods –namespace=<ns name>
+
+kubectl run <podname> --image=<imagename> -n=<ns name>
+
+(create pod in a particular namespace)
+
+kubectl get pod --all-namespaces -o wide or
+kubectl get pods -A
+(search for a particular pod name from all ns)
+
+Kubectl get svc -n=<ns name>
+
+Kubectl run - -image=nginx nginx
+Kubectl create deployment - -image=nginx nginx
+Kubectl expose deployment nginx - -port 80
+Kubectl edit deployment nginx
+Kubectl scale deployment nginx - -replicas=5
+Kubectl set image deployment nginx nginx=nginx:1.18
+
+
+Certification Tips - Imperative Commands with Kubectl
+While you would be working mostly the declarative way - using definition files, imperative commands can help in getting one time tasks done quickly, as well as generate a definition template easily. This would help save considerable amount of time during your exams.
+Before we begin, familiarize with the two options that can come in handy while working with the below commands:
+--dry-run: By default as soon as the command is run, the resource will be created. If you simply want to test your command , use the --dry-run=client option. This will not create the resource, instead, tell you whether the resource can be created and if your command is right.
+-o yaml: This will output the resource definition in YAML format on screen.
+
+Use the above two in combination to generate a resource definition file quickly, that you can then modify and create resources as required, instead of creating the files from scratch.
+
+POD
+Create an NGINX Pod
+kubectl run nginx --image=nginx
+
+Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
+kubectl run nginx --image=nginx --dry-run=client -o yaml
+
+Deployment
+Create a deployment
+kubectl create deployment --image=nginx nginx
+
+Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
+
+Generate Deployment with 4 Replicas
+kubectl create deployment nginx --image=nginx --replicas=4
+
+You can also scale a deployment using the kubectl scale command.
+kubectl scale deployment nginx --replicas=4
+Another way to do this is to save the YAML definition to a file and modify
+kubectl create deployment nginx --image=nginx --dry-run=client -o yaml > nginx-deployment.yaml
+
+You can then update the YAML file with the replicas or any other field before creating the deployment.
+
+Service
+Create a Service named redis-service of type ClusterIP to expose pod redis on port 6379
+kubectl expose pod redis --port=6379 --name redis-service --dry-run=client -o yaml
+(This will automatically use the pod's labels as selectors)
+Or
+kubectl create service clusterip redis --tcp=6379:6379 --dry-run=client -o yaml (This will not use the pods labels as selectors, instead it will assume selectors as app=redis. You cannot pass in selectors as an option. So it does not work very well if your pod has a different label set. So generate the file and modify the selectors before creating the service)
+
+Create a Service named nginx of type NodePort to expose pod nginx's port 80 on port 30080 on the nodes:
+kubectl expose pod nginx --type=NodePort --port=80 --name=nginx-service --dry-run=client -o yaml
+(This will automatically use the pod's labels as selectors, but you cannot specify the node port. You have to generate a definition file and then add the node port in manually before creating the service with the pod.)
+Or
+kubectl create service nodeport nginx --tcp=80:80 --node-port=30080 --dry-run=client -o yaml
+(This will not use the pods labels as selectors)
+Both the above commands have their own challenges. While one of it cannot accept a selector the other cannot accept a node port. I would recommend going with the kubectl expose command. If you need to specify a node port, generate a definition file using the same command and manually input the nodeport before creating the service.
+
+
+
+kubectl run nginx-pod --image=nginx:alpine
+
+Kubectl run redis - -image=redis:alpine –labels=”tier=db”
+
+kubectl run redis --image=redis:alpine --dry-run=client -o yaml > redis.yaml
+kubectl apply -f redis.yaml
+
+kubectl create service clusterip redis-service --tcp=6379:6379 
+Kubectl expose pod redis - - port= 6379 –name=redis-service 
+
+kubectl run custom-nginx --image=nginx --port=8080
+
+kubectl create namespace dev-ns
+
+kubectl create deployment redis-deploy --image=redis --namespace=dev-ns --replicas=2
+
+Kubectl get deployment -n dev-ns
+
+
+kubectl run httpd --image=httpd:alpine --namespace=default
+kubectl run httpd --image=httpd:alpine --port=80 - -expose
+
+Kubectl replace  - -force -f nginx.yaml
+(To delete previous deployment and recreate – instead of deleting and then Kubectl apply -f commands)
+
+Kubectl get pods - -watch
+
+kubectl get pods --selector env=dev
+Kubectl get pods - -selector env=dev - -no headers | wc -l
+(counts the number of lines excluding headers – for long lists)
+
+kubectl get pods --selector bu=finance
+
+kubectl get all --selector env=prod – -no headers | wc -l
+
+kubectl get pods  --selector env=prod,bu=finance,tier=frontend
+(multiple selectors command separated by commas)
+
+
